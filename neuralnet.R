@@ -35,30 +35,29 @@ neuralnet <- function(data, testData, nh=5, lr=0.1, maxSeasons=500, targetErr=0.
 		# training
 		for (i in 1:length(data$insts))
 		{
-			inputRow <- c(data$insts[[i]],1)
-			output <- inputRow %*% A
-			hidden <- sapply(output, function(x) {(exp(x) - exp(-x))/(exp(x) + exp(-x))})
-			output <- c(hidden,1) %*% B
-			output <- (exp(output) - exp(-output))/(exp(output) + exp(-output))
+			inWithBias <- c(data$insts[[i]],1)
+			outHid <- inWithBias %*% A
+			zOutHid <- sapply(outHid, function(x) {(exp(x) - exp(-x))/(exp(x) + exp(-x))})
+			netOut <- c(zOutHid,1) %*% B
+			zNetOut <- (exp(netOut) - exp(-netOut))/(exp(netOut) + exp(-netOut))
 			
-			outDelta <- lr*(1 - output^2)* (output - data$res[[i]]) * c(hidden,1) 
+			err = (zNetOut - data$res[[i]])^2 / 2
+			outDelta <- lr*(1 - netOut^2)* err * c(zOutHid,1) 
 			
 			for (j in 1:(ni+1))
 				for (k in 1:nh)
-					A_diff[j,k] <- lr*(1 - output^2)* B[k] * (1 - hidden[k]^2) * (output - data$res[[i]]) * inputRow[j]
-			
+					A_diff[j,k] <- lr*(1 - netOut^2)* B[k] * (1 - outHid[k]^2) * err * inWithBias[j]
 			
 			A <- A + A_diff
 			B <- B + outDelta
-			
 		}
 
 		meanErr <- 0
 		#testing
 		for (i in 1:length(data$tInsts)) {
-			hidden <- sapply(c(data$tInsts[[i]],1) %*% A, function(x) {(exp(x) - exp(-x))/(exp(x) + exp(-x))})
-			output <- sapply(c(hidden,1) %*% B, function(x) {(exp(x) - exp(-x))/(exp(x) + exp(-x))})
-			err <- (output - data$tRes[[i]])^2/2
+			outHid <- sapply(c(data$tInsts[[i]],1) %*% A, function(x) {(exp(x) - exp(-x))/(exp(x) + exp(-x))})
+			netOut <- sapply(c(outHid,1) %*% B, function(x) {(exp(x) - exp(-x))/(exp(x) + exp(-x))})
+			err <- (netOut - data$tRes[[i]])^2/2
 			meanErr <- meanErr + err
 		}
 		meanErr <- meanErr / length(data$tInsts)
