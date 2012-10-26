@@ -41,17 +41,17 @@ neuralnet <- function(data, testData, nh=5, lr=0.1, maxSeasons=500, targetErr=0.
 			netOut <- c(zOutHid,1) %*% B
 			zNetOut <- (exp(netOut) - exp(-netOut))/(exp(netOut) + exp(-netOut))
 			
-			err = (zNetOut - data$res[[i]])^2 / 2
-			outDelta <- lr*(1 - netOut^2)* err * c(zOutHid,1) 
+			err = (zNetOut - data$res[[i]])
+			outDelta <- lr*(1 - zNetOut^2)* err * c(zOutHid,1) 
 			
 			for (j in 1:(ni+1))
 				for (k in 1:nh)
-					A_diff[j,k] <- lr*(1 - netOut^2)* B[k] * (1 - outHid[k]^2) * err * inWithBias[j]
+					A_diff[j,k] <- lr*(1 - netOut^2)* B[k] * (1 - zOutHid[k]^2) * err * inWithBias[j]
 			
-			A <- A + A_diff
-			B <- B + outDelta
+			A <- A - A_diff
+			B <- B - outDelta
 		}
-
+		
 		meanErr <- 0
 		#testing
 		for (i in 1:length(data$tInsts)) {
