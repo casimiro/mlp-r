@@ -10,23 +10,22 @@ mlp <- function(ni=1, nh=5, no=1, lr=0.2, activation="sigmoid")
 }
 
 train <- function(x, ...) UseMethod("train")
+predict <- function(x, ...) UseMethod("predict")
 
-sigmoid <- function(x) {
-  1 / ( 1 + exp(-x) )
-}
+sigmoid <- function(x) { 1 / ( 1 + exp(-x) ) }
 
 train.mlp <- function(m, input, output)
 {
  	ADelta <- m$ADelta
 	inWithBias <- c(input,1) # concatenate bias input
-	outHid <- inWithBias %*% m$A # propagate input row through weights between input and hidden layer
-	zOutHid <- sigmoid(outHid) #(exp(outHid) - exp(-outHid))/(exp(outHid) + exp(-outHid)) # apply activation function on hidden output
+	outHid <- inWithBias %*% m$A 
+	zOutHid <- sigmoid(outHid) 
 
-	netOut <- c(zOutHid,1) %*% m$B # concatenate bias input to hidden output and propagates it
+	netOut <- c(zOutHid,1) %*% m$B
 	if(m$activation == "sigmoid") zNetOut <- sigmoid(netOut)
 	else zNetOut <- tanh(netOut)
 		
-	err = (zNetOut - output) # error
+	err = (zNetOut - output)
 	
 	if(m$activation == "sigmoid")
   		BDelta <- m$lr * (zNetOut*(1-zNetOut)) * err * c(zOutHid,1)
@@ -37,7 +36,7 @@ train.mlp <- function(m, input, output)
 	for (j in 1:nrow(m$A))
 		for (k in 1:ncol(m$A))
 			if(m$activation == "sigmoid")		
-				ADelta[j,k] <- m$lr * (zNetOut*(1-zNetOut)) * m$B[k] * (zOutHid[k]*(1-zOutHid[k])) * err * inWithBias[j] # (1 - zOutHid[k]^2)
+				ADelta[j,k] <- m$lr * (zNetOut*(1-zNetOut)) * m$B[k] * (zOutHid[k]*(1-zOutHid[k])) * err * inWithBias[j]
 			else
 				ADelta[j,k] <- m$lr * (1 - zNetOut^2) * m$B[k] * (1 - zOutHid[k]^2) * err * inWithBias[j] # 
 
