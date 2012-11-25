@@ -1,35 +1,50 @@
-mlp <- function(ni=1, nh=5, no=1, lr=0.2)
+mlp <- function(ni=1, nh=5, no=1, lr=0.2, activation="sigmoid")
 {
 	A <- replicate(nh, rnorm(ni+1, sd=0.01))
 	ADelta <- array(1, c(ni+1,nh))
 	B <- replicate(no, rnorm(nh+1, sd=0.01))
-	mlp <- list(A=A, ADelta=ADelta, B=B, lr=lr)
+	mlp <- list(A=A, ADelta=ADelta, B=B, lr=lr, activation=activation)
+	mlp <- list2env(mlp)
 	class(mlp) <- "mlp"
 	mlp
 }
 
 train <- function(x, ...) UseMethod("train")
 
-train.mlp <- function(mlp, input, output)
+sigmoid <- function(x) {
+  1 / ( 1 + exp(-x) )
+}
+
+train.mlp <- function(m, input, output)
 {
+ 	ADelta <- m$ADelta
 	inWithBias <- c(input,1) # concatenate bias input
-	outHid <- inWithBias %*% mlp$A # propagate input row through weights between input and hidden layer
-	zOutHid <- (exp(outHid) - exp(-outHid))/(exp(outHid) + exp(-outHid)) # apply activation function on hidden output
+	outHid <- inWithBias %*% m$A # propagate input row through weights between input and hidden layer
+	zOutHid <- sigmoid(outHid) #(exp(outHid) - exp(-outHid))/(exp(outHid) + exp(-outHid)) # apply activation function on hidden output
 
-	netOut <- c(zOutHid,1) %*% mlp$B # concatenate bias input to hidden output and propagates it
-	zNetOut <- (exp(netOut) - exp(-netOut))/(exp(netOut) + exp(-netOut)) # calculate network output using activation function
-
+	netOut <- c(zOutHid,1) %*% m$B # concatenate bias input to hidden output and propagates it
+	if(m$activation == "sigmoid") zNetOut <- sigmoid(netOut)
+	else zNetOut <- tanh(netOut)
+		
 	err = (zNetOut - output) # error
-	# BDelta = learningRate * diff(g(x)) * err * hiddenOutputs
-	BDelta <- mlp$lr * (1 - zNetOut^2) * err * c(zOutHid,1)
-
+	
+	if(m$activation == "sigmoid")
+  		BDelta <- m$lr * (zNetOut*(1-zNetOut)) * err * c(zOutHid,1)
+	else
+		BDelta <- m$lr * (1 - zNetOut^2) * err * c(zOutHid,1) #tanh
+	
 	# Update each weight from inputs to hidden neurons
-	for (j in 1:nrow(mlp$A))
-		for (k in 1:ncol(mlp$A))
-			mlp$ADelta[j,k] <- mlp$lr * (1 - zNetOut^2) * mlp$B[k] * (1 - zOutHid[k]^2) * err * inWithBias[j]
+	for (j in 1:nrow(m$A))
+		for (k in 1:ncol(m$A))
+			if(m$activation == "sigmoid")		
+				ADelta[j,k] <- m$lr * (zNetOut*(1-zNetOut)) * m$B[k] * (zOutHid[k]*(1-zOutHid[k])) * err * inWithBias[j] # (1 - zOutHid[k]^2)
+			else
+				ADelta[j,k] <- m$lr * (1 - zNetOut^2) * m$B[k] * (1 - zOutHid[k]^2) * err * inWithBias[j] # 
 
-	mlp$A <- mlp$A - mlp$ADelta
-	mlp$B <- mlp$B - BDelta
+	A <- m$A - ADelta
+	B <- m$B - BDelta
+	assign('A', A, envir=m)
+  	assign('B', B, envir=m)
 	zNetOut
 }
 

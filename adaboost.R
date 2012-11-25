@@ -27,11 +27,23 @@ train.adaboostr <- function(adaboostr)
     }
 }
 
-predict.adaboostr <- function(adaboostr)
+predict.adaboostr <- function(adaboostr, x)
 {
+    # para compor as hipoteses dos especialistas,
+    # eu devo ordenar suas predicoes de forma crescente
+    # e pegar a primeira predicao cuja soma dos log(1/beta) das primeiras
+    # predicoes ate ele seja maior que o log(1/beta) medio
+  
     tyhat <- rep(0, length(adaboostr$ty))
-    for (i in 1:length(adaboostr$tx))
-    {
-
+    threshold <- mean(log(1/adaboostr$modelsBeta))
+    ys <- sapply(adaboostr$models, function(mlp) predict(mlp,x))
+    invBetas <- adaboostr$modelsBeta[sort(ys)]
+    res <- 0
+    
+    for (i in 1:length(ys)) {
+        res <- ys[i]
+        if (sum(ys[1:i]) > threshold)
+            break;
     }
+    res
 }
