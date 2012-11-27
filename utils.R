@@ -16,7 +16,7 @@ create.instances <- function(data, lag=7, testPercentage=0.2)
 	ret
 }
 
-cross.validation <- function(mlp, x, y, k=10)
+cross.validation <- function(model, x, y, k=10)
 {
 	index <- 1:nrow(x)
 	index <- sample(index,nrow(x))
@@ -24,12 +24,16 @@ cross.validation <- function(mlp, x, y, k=10)
 	errors <- rep(0,k)
 	
 	for (i in 1:k) {
+		reset(model)
 		testSet <- index[(1+(k-1)*foldSize):(k*foldSize)]
 		trainSet <- setdiff(index,testSet)
-		sapply(trainSet, function(j) train(mlp,x[j,], y[j]))
-		yhat <- sapply(testSet, function(j) predict(mlp, x[j,]))
+		if(class(model) == "adaboostr")
+			train(model,x[trainSet,],y[trainSet])
+		else # mlp
+			sapply(trainSet, function(j) train(model,x[j,], y[j]))
+		yhat <- sapply(testSet, function(j) predict(model, x[j,]))
 		diff <- y[testSet] - yhat
-		errors[i] <- sum(diff^2)
+		errors[i] <- mean(diff^2)
 	}
 	
 	errors

@@ -1,31 +1,42 @@
-adaboostr <- function(models, x, y, tx, ty)
+adaboostr <- function(models)
 {
-	p <- rep(1/nrows(inputs), nrows(inputs))
-    res = list(models=models, x=x, y=y, tx=tx, ty=ty, modelsBeta=rep(0,length(models)), p=p)
+	
+    res = list(models=models, modelsBeta=rep(0,length(models)))
 	res <- list2env(res)
     class(res) <- 'adaboostr'
     res
 }
 
-train.adaboostr <- function(adaboostr)
+reset.adaboostr <- function(adaboostr)
 {
+	for (mlp in adaboostr$models)
+		reset(mlp)
+	
+	modelsBeta=rep(0,length(adaboostr$models))
+	assign('modelsBeta', modelsBeta, envir=adaboostr)
+}
+
+train.adaboostr <- function(adaboostr, x, y)
+{
+	reset(adaboostr)
 	# probabilitie of each training instance
-	index <- 1:nrows(adaboostr$x)
+	p <- rep(1/nrow(x), nrow(x))
+	index <- 1:nrow(x)
     modelsBeta <- adaboostr$modelsBeta
 	p <- adaboostr$p
     curModel <- 1
     for (mlp in adaboostr$models)
     {
-        tset <- sample(index, nrows(adaboostr$x), TRUE, adaboostr$p)
-        yhat <- sapply(tset, function(x) train(mlp,adaboostr$x[tset,],adaboostr$y[tset]))
-        diff <- abs(yhat - outputs[tset])
+        tset <- sample(index, nrow(x), TRUE, p)
+        yhat <- sapply(tset, function(j) train(mlp,x[j,],y[j]))
+        diff <- abs(yhat - y[tset])
         L <- diff / max(diff)
-        lhat <- sum(L*adaboostr$p[tset])
+        lhat <- sum(L*p[tset])
         modelsBeta[curModel] <- lhat / (1 - lhat)
-        p[tset] <- adaboostr$p[tset] * adaboostr$modelsBeta[curModel]^(1 - L)
-
-        if (lhat <= 0.5)
-            break
+        p[tset] <- p[tset] * modelsBeta[curModel]^(1 - L)
+		curModel <- curModel + 1
+        #if (lhat <= 0.5)
+        #    break
     }
 	assign('p', p, envir=adaboostr)
 	assign('modelsBeta', modelsBeta, envir=adaboostr)
@@ -50,3 +61,4 @@ predict.adaboostr <- function(adaboostr, x)
     }
     res
 }
+

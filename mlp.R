@@ -8,11 +8,19 @@ mlp <- function(ni=1, nh=5, no=1, lr=0.2, activation="sigmoid")
 	class(mlp) <- "mlp"
 	mlp
 }
-
+reset <- function(x, ...) UseMethod("reset")
 train <- function(x, ...) UseMethod("train")
 predict <- function(x, ...) UseMethod("predict")
 
 sigmoid <- function(x) { 1 / ( 1 + exp(-x) ) }
+
+reset.mlp <- function(m)
+{
+	A <- replicate(ncol(m$A), rnorm(nrow(m$A), sd=0.01))
+	B <- replicate(1, rnorm(ncol(m$A)+1, sd=0.01))
+	assign('A', A, envir=m)
+	assign('B', B, envir=m)
+}
 
 train.mlp <- function(m, input, output)
 {
