@@ -1,3 +1,6 @@
+require(foreach)
+require(doMC)
+
 create.instances <- function(data, lag=7, testPercentage=0.2)
 {
 	rows <- dim(data)[1]
@@ -16,15 +19,15 @@ create.instances <- function(data, lag=7, testPercentage=0.2)
 	ret
 }
 
-cross.validation <- function(model, x, y, k=10)
+cross.validation <- function(m, x, y, k=10)
 {
 	index <- 1:nrow(x)
 	index <- sample(index,nrow(x))
 	foldSize <- nrow(x) / k
-	errors <- rep(0,k)
 	
-	for (i in 1:k) {
-		reset(model)
+	registerDoMC()
+	errors <- foreach(i = 1:k, .combine='c') %dopar% {
+		model <- clone(m)
 		testSet <- index[(1+(k-1)*foldSize):(k*foldSize)]
 		trainSet <- setdiff(index,testSet)
 		if(class(model) == "adaboostr")
@@ -33,8 +36,11 @@ cross.validation <- function(model, x, y, k=10)
 			sapply(trainSet, function(j) train(model,x[j,], y[j]))
 		yhat <- sapply(testSet, function(j) predict(model, x[j,]))
 		diff <- y[testSet] - yhat
-		errors[i] <- mean(diff^2)
+		
+		mean(diff^2)
+		
 	}
+	
 	
 	errors
 }

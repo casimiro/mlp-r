@@ -7,6 +7,13 @@ adaboostr <- function(models)
     res
 }
 
+clone.adaboostr <- function(adaboostr)
+{
+  models <- sapply(adaboostr$models, function(m) clone(m))
+  c <- adaboostr(models)
+  c
+}
+
 reset.adaboostr <- function(adaboostr)
 {
 	for (mlp in adaboostr$models)
