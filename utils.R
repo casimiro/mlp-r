@@ -25,7 +25,7 @@ cross.validation <- function(m, x, y, k=10)
 	index <- sample(index,nrow(x))
 	foldSize <- nrow(x) / k
 	
-	registerDoMC()
+	registerDoMC(cores=8)
 	errors <- foreach(i = 1:k, .combine='c') %dopar% {
 		model <- clone(m)
 		testSet <- index[(1+(k-1)*foldSize):(k*foldSize)]

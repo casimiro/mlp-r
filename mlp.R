@@ -1,8 +1,8 @@
 mlp <- function(ni=1, nh=5, no=1, lr=0.2, activation="sigmoid")
 {
-	A <- replicate(nh, rnorm(ni+1, sd=0.01))
+	A <- replicate(nh, rnorm(ni+1, sd=0.02))
 	ADelta <- array(1, c(ni+1,nh))
-	B <- replicate(no, rnorm(nh+1, sd=0.01))
+	B <- replicate(no, rnorm(nh+1, sd=0.02))
 	mlp <- list(A=A, ADelta=ADelta, B=B, lr=lr, activation=activation)
 	mlp <- list2env(mlp)
 	class(mlp) <- "mlp"
@@ -22,8 +22,8 @@ clone.mlp <- function(m) {
 
 reset.mlp <- function(m)
 {
-	A <- replicate(ncol(m$A), rnorm(nrow(m$A), sd=0.01))
-	B <- replicate(1, rnorm(ncol(m$A)+1, sd=0.01))
+	A <- replicate(ncol(m$A), rnorm(nrow(m$A), sd=0.02))
+	B <- replicate(1, rnorm(ncol(m$A)+1, sd=0.02))
 	assign('A', A, envir=m)
 	assign('B', B, envir=m)
 }
@@ -31,11 +31,11 @@ reset.mlp <- function(m)
 train.mlp <- function(m, input, output)
 {
 	ADelta <- m$ADelta
-	inWithBias <- c(input,1) # concatenate bias input
+	inWithBias <- c(input,-1) # concatenate bias input
 	outHid <- inWithBias %*% m$A 
 	zOutHid <- sigmoid(outHid) 
 	
-	netOut <- c(zOutHid,1) %*% m$B
+	netOut <- c(zOutHid,-1) %*% m$B
 	if(m$activation == "sigmoid") zNetOut <- sigmoid(netOut)
 	else zNetOut <- tanh(netOut)
 	
@@ -70,6 +70,25 @@ predict.mlp <- function(mlp, input)
 	netOut <- c(zOutHid,1) %*% mlp$B
 	zNetOut <- (exp(netOut) - exp(-netOut))/(exp(netOut) + exp(-netOut))
 	zNetOut
+}
+
+holdout <- function(mlp, data, max.seasons=500, min.error=0.01)
+{	
+	reset(mlp)
+	error <- 0
+	i <- 0
+	for (i in 1:max.seasons)
+	{
+		sapply(1:nrow(data$insts), function(x) train(mlp,data$insts[x,],data$res[x]))
+		yhat <- sapply(1:nrow(data$tInsts), function(x) predict(mlp,data$tInsts[x,]))
+		diff <- (data$tRes - yhat)^2
+		error <- mean(diff)
+		print(error)
+		if (error <= min.error)
+			break;
+	}
+	r <- list(error=error, seasons=i)
+	r
 }
 
 neuralnet <- function(data, test, nh=5, lr=0.1, maxSeasons=500, targetErr=0.01)
